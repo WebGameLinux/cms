@@ -3,6 +3,7 @@ package controllers
 import (
 		"github.com/WebGameLinux/cms/dto/enums"
 		"github.com/WebGameLinux/cms/dto/services"
+		"github.com/WebGameLinux/cms/models"
 		"github.com/astaxie/beego"
 )
 
@@ -15,8 +16,8 @@ type UserController struct {
 }
 
 func (this *UserController) URLMapping() {
-		this.Mapping("GetUserById", this.GetUserById)
 		this.Mapping("Register", this.Register)
+		this.Mapping("GetUserById", this.GetUserById)
 }
 
 // @router /v1/user/:id [get]
@@ -33,13 +34,16 @@ func (this *UserController) GetUserById() {
 
 // @router /v1/user/register [post]
 func (this *UserController) Register() {
-		var res services.ResultStruct
-		if n, err := this.GetInt64(":id"); err == nil {
-				res = services.GetUserBaseService().GetById(n)
+		var (
+				user = new(models.User)
+				res  = services.NewSuccessResult(nil)
+		)
+		if err := this.ParseForm(user); err != nil {
+				res.Set("code", enums.InvalidParams.Int())
+				res.Set("message", enums.InvalidParams.WrapMsg(err))
 		} else {
-				res = services.NewParamsErrorResult(3000, err.Error())
+				res = services.GetUserRegisterService().RegisterByUser(user)
 		}
 		this.Data["json"] = res.Mapper()
 		this.ServeJSON()
 }
-

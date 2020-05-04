@@ -24,6 +24,7 @@ type UserRepository interface {
 		GetUserProperties(id int64, keys []string) mapper.Mapper
 		Update(id int64, data map[string]interface{}) *models.User
 		CreateByMap(data map[string]interface{}) int64
+		Create(data *models.User) int64
 }
 
 type UserBaseRepository struct {
@@ -126,5 +127,11 @@ func (user *UserBaseRepository) CreateByMap(data map[string]interface{}) int64 {
 				return 0
 		}
 		id := user.Model.Create(model)
+		return id
+}
+
+// 通过user 模型创建
+func (user *UserBaseRepository) Create(data *models.User) int64 {
+		id := user.Model.Create(data)
 		return id
 }

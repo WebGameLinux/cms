@@ -1,6 +1,7 @@
 package models
 
 import (
+		"encoding/json"
 		"errors"
 		"github.com/WebGameLinux/cms/models/conditions"
 		utils "github.com/WebGameLinux/cms/utils/beego"
@@ -9,6 +10,7 @@ import (
 		string2 "github.com/WebGameLinux/cms/utils/string"
 		"github.com/WebGameLinux/cms/utils/types"
 		"github.com/astaxie/beego/orm"
+		"github.com/astaxie/beego/validation"
 		"time"
 )
 
@@ -214,4 +216,31 @@ func (wrapper *UserWrapper) Search(cond map[string]interface{}) []User {
 		query.Select("*").From(wrapper.Table()).SetModel(&users).Get()
 		wrapper.Error = query.GetError()
 		return users
+}
+
+func (this *User) LoadByMap(data map[string]interface{}) error {
+		if len(data) == 0 {
+				return errors.New("empty data map")
+		}
+		buf, err := json.Marshal(data)
+		if err != nil {
+				return err
+		}
+		err = json.Unmarshal(buf, this)
+		if err != nil {
+				return err
+		}
+		return nil
+}
+
+func (this *User) Valid() (*validation.Validation, error) {
+		var (
+				v   = new(validation.Validation)
+				b   bool
+				err error
+		)
+		if b, err = v.Valid(this); err != nil && !b {
+				return v, err
+		}
+		return nil, nil
 }

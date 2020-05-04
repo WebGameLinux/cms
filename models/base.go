@@ -5,6 +5,7 @@ import (
 		utils "github.com/WebGameLinux/cms/utils/beego"
 		"github.com/WebGameLinux/cms/utils/reflects"
 		"github.com/astaxie/beego/orm"
+		"github.com/astaxie/beego/validation"
 		"reflect"
 		"strings"
 )
@@ -38,6 +39,14 @@ type ModelWrapper interface {
 		Table() string
 		NewModel(data ...map[string]interface{}) interface{}
 		OptMap(key string, def ...map[string]interface{}) map[string]interface{}
+}
+
+type AutoLoaderModel interface {
+		LoadByMap(data map[string]interface{}) error
+}
+
+type VerifyAbleModel interface {
+		Valid() (*validation.Validation, error)
 }
 
 func IsOrmUsingError(err error) bool {
