@@ -1,7 +1,6 @@
 package models
 
 import (
-		"github.com/WebGameLinux/cms/models/enums"
 		"time"
 )
 
@@ -13,7 +12,7 @@ type User struct {
 		Mobile       string       `orm:"column(mobile);index;size(20);description(手机号);null" json:"mobile"`
 		PasswordHash string       `orm:"size(128);column(password_hash);description(密文密码)" json:"passwordHash"`
 		Version      int          `orm:"column(version);default(1);description(记录版本号)" json:"version"`
-		Gender       enums.Gender `orm:"column(gender);default(0);description(用户性别,0:未知,1:男,2:女,3:其他)" json:"gender"`
+		Gender       int         `orm:"column(gender);default(0);description(用户性别,0:未知,1:男,2:女,3:其他)" json:"gender"`
 		UniqueSeqKey
 		CreateDate
 		SoftDeleteDate

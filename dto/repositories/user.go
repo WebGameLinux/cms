@@ -1,137 +1,120 @@
 package repositories
 
 import (
-		"errors"
-		"github.com/WebGameLinux/cms/dto/transforms"
+		"github.com/WebGameLinux/cms/dto/common"
+		"github.com/WebGameLinux/cms/dto/enums"
+		"github.com/WebGameLinux/cms/dto/request"
+		"github.com/WebGameLinux/cms/dto/response"
+		"github.com/WebGameLinux/cms/dto/services"
 		"github.com/WebGameLinux/cms/models"
-		"github.com/WebGameLinux/cms/models/enums"
 		"github.com/WebGameLinux/cms/utils/mapper"
-		"sync"
 )
 
-var (
-		once                       sync.Once
-		instanceUserBaseRepository *UserBaseRepository
-)
-
-// 获取用户
-type UserRepository interface {
-		GetById(int64) *models.User
-		Password(int64) string
-		GetError() error
-		VerifyPasswordById(id int64, pass string, encode bool) bool
-		Exists(string, interface{}) bool
-		GetUserProperties(id int64, keys []string) mapper.Mapper
-		Update(id int64, data map[string]interface{}) *models.User
-		CreateByMap(data map[string]interface{}) int64
-		Create(data *models.User) int64
+type UserRepositoryInterface interface {
+		GetById(int64) common.JsonResponseInterface
+		VerifyPasswordById(id int64, pass string, encode ...bool) bool
+		CreateUser(map[string]interface{}) common.JsonResponseInterface
+		Login(params *request.LoginParamsDto) common.JsonResponseInterface
+		LoginByUser(user *models.User) common.JsonResponseInterface
+		LoginByUid(uid int64) common.JsonResponseInterface
+		LoginByMobile(mobile string) common.JsonResponseInterface
+		LoginByEmail(email string) common.JsonResponseInterface
+		RegisterByUser(user *models.User) common.JsonResponseInterface
+		RegisterByMap(data map[string]interface{}) common.JsonResponseInterface
 }
 
-type UserBaseRepository struct {
-		Model *models.UserWrapper
+type UserRepository struct {
+		service services.UserServiceInterface
 }
 
-func GetUserRepository() UserRepository {
-		if nil == instanceUserBaseRepository {
-				instanceUserBaseRepository = GetUserBaseRepository()
+var userRepository *UserRepository
+
+func NewUserRepository() *UserRepository {
+		return &UserRepository{
+				service: services.GetUserService(),
 		}
-		return instanceUserBaseRepository
 }
 
-func GetUserBaseRepository(options ...interface{}) *UserBaseRepository {
-		var (
-				v    = ""
-				ok   bool
-				repo = new(UserBaseRepository)
-		)
-		if len(options) == 0 {
-				repo.Model = models.GetUser()
-				return repo
+func GetUserRepository() UserRepositoryInterface {
+		if userRepository == nil {
+				userRepository = NewUserRepository()
 		}
-		name := options[0]
-		if v, ok = name.(string); ok {
-				v = ""
-		}
-		repo.Model = models.GetUser(v)
-		return repo
+		return userRepository
 }
 
-func (user *UserBaseRepository) Exists(string, interface{}) bool {
-		panic("implement me")
-}
-
-func (user *UserBaseRepository) GetUserProperties(id int64, keys []string) mapper.Mapper {
-		panic("implement me")
-}
-
-func (user *UserBaseRepository) VerifyPasswordById(id int64, pass string, encode bool) bool {
-		if pass == "" {
-				return false
-		}
-		var data = user.Model.GetById(id)
+// 通过uid 获取用户信息
+func (this *UserRepository) GetById(id int64) common.JsonResponseInterface {
+		var data = this.service.GetById(id)
 		if data == nil {
-				return false
+				return common.Warn(enums.RecordNotExists.Int(), enums.RecordNotExists.WrapMsg(this.service.GetError()))
 		}
-		if data.PasswordHash == "" {
-				return false
+		return common.Success(mapper.NewKvMap("user", data.Filter()))
+}
+
+// 创建用户
+func (this *UserRepository) CreateUser(data map[string]interface{}) common.JsonResponseInterface {
+		id := this.service.CreateByMap(data)
+		err := this.service.GetError()
+		if id <= 0 || err != nil {
+				return common.Warn(enums.CreateRecordField.Int(), enums.CreateRecordField.WrapMsg(err))
 		}
-		return true
+		return common.Success(this.GetById(id).Item(), enums.SUCCESS.String())
 }
 
-func (user *UserBaseRepository) Lists() {
-
-}
-
-func (user *UserBaseRepository) GetOne(conditions map[string]interface{}) *models.User {
-		return nil
-}
-
-func (user *UserBaseRepository) GetById(id int64) *models.User {
-		return user.Model.GetById(id)
-}
-
-func (user *UserBaseRepository) Update(id int64, data map[string]interface{}) *models.User {
-		// 字段重命名
-		if v, ok := data["password"]; ok {
-				data["password_hash"] = v
-				delete(data, "password_hash")
+// 验证登陆密码
+func (this *UserRepository) VerifyPasswordById(id int64, pass string, encode ...bool) bool {
+		if len(encode) == 0 {
+				encode = append(encode, false)
 		}
-		// gender 类型转换
-		if v, ok := data["gender"]; ok {
-				if n, ok := v.(int); ok {
-						data["gender"] = enums.ParseInt(n)
-				}
+		return this.service.VerifyPasswordById(id, pass, encode[0])
+}
+
+// 更新用户记录
+func (this *UserRepository) UpdateById(id int64, data map[string]interface{}) common.JsonResponseInterface {
+		res := this.service.Update(id, data)
+		err := this.service.GetError()
+		if res == nil || err != nil {
+				return common.Warn(enums.UpdateModelField.Int(), enums.UpdateModelField.WrapMsg(err))
 		}
-		return user.Model.Update(id, data)
+		return common.Success(res, enums.SUCCESS.String())
 }
 
-func (user *UserBaseRepository) Password(id int64) string {
-		model := user.Model.GetById(id)
-		if model == nil {
-				return ""
+func (this *UserRepository) Login(params *request.LoginParamsDto) common.JsonResponseInterface {
+		return this.LoginResponseFilter(services.GetLoginService().Login(params))
+}
+
+func (this *UserRepository) LoginByUser(user *models.User) common.JsonResponseInterface {
+		return this.LoginResponseFilter(services.GetLoginService().LoginByUser(user))
+}
+
+func (this *UserRepository) LoginByUid(uid int64) common.JsonResponseInterface {
+		return this.LoginResponseFilter(services.GetLoginService().LoginByUid(uid))
+}
+
+func (this *UserRepository) LoginByMobile(mobile string) common.JsonResponseInterface {
+		return this.LoginResponseFilter(services.GetLoginService().LoginByMobile(mobile))
+}
+
+func (this *UserRepository) LoginByEmail(email string) common.JsonResponseInterface {
+		return this.LoginResponseFilter(services.GetLoginService().LoginByEmail(email))
+}
+
+func (this *UserRepository) RegisterByUser(user *models.User) common.JsonResponseInterface {
+		return services.GetUserRegisterService().RegisterByUser(user)
+}
+
+func (this *UserRepository) RegisterByMap(data map[string]interface{}) common.JsonResponseInterface {
+		return services.GetUserRegisterService().RegisterByMap(data)
+}
+
+func (this *UserRepository) LoginResponseFilter(responseInterface common.JsonResponseInterface) common.JsonResponseInterface {
+		if !responseInterface.IsSuccess() {
+				return responseInterface
 		}
-		return model.PasswordHash
-}
-
-func (user *UserBaseRepository) GetError() error {
-		return user.Model.GetError()
-}
-
-func (user *UserBaseRepository) CreateByMap(data map[string]interface{}) int64 {
-		model := new(models.User)
-		m := mapper.Mapper(data)
-		m.ReName("password", "password_hash")
-		m.Transform("gender", transforms.TransformMapGender)
-		if mapper.SetByMap(model, m) {
-				user.Model.Error = errors.New("数据格式不匹配")
-				return 0
+		data := responseInterface.Item()
+		if v, ok := data.(*response.LoginRespJson); ok {
+				d := new(response.LoginFilterRespJson)
+				responseInterface.Set("data", d.Init(v))
 		}
-		id := user.Model.Create(model)
-		return id
-}
-
-// 通过user 模型创建
-func (user *UserBaseRepository) Create(data *models.User) int64 {
-		id := user.Model.Create(data)
-		return id
+		return responseInterface
 }

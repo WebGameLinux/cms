@@ -14,8 +14,8 @@ import (
 
 func init() {
 	_, file, _, _ := runtime.Caller(0)
-	apppath, _ := filepath.Abs(filepath.Dir(filepath.Join(file, ".." + string(filepath.Separator))))
-	beego.TestBeegoInit(apppath)
+	apathy, _ := filepath.Abs(filepath.Dir(filepath.Join(file, ".." + string(filepath.Separator))))
+	beego.TestBeegoInit(apathy)
 }
 
 
@@ -31,7 +31,7 @@ func TestBeego(t *testing.T) {
 	        Convey("Status Code Should Be 200", func() {
 	                So(w.Code, ShouldEqual, 200)
 	        })
-	        Convey("The Result Should Not Be Empty", func() {
+	        Convey("The Result Should Not Be EmptyExclude", func() {
 	                So(w.Body.Len(), ShouldBeGreaterThan, 0)
 	        })
 	})

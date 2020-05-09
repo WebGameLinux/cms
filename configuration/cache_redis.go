@@ -37,7 +37,7 @@ const (
 		CnfKvRedisHostDefault       = "127.0.0.1"
 		CnfKvRedisPortDefault       = 6379
 		CnfKvRedisDbNumDefault      = 0
-		StringTemplate              = `{"key":"%s","conn":"%s","dbNum":"%d","user":"%s","password":"%s"}`
+		StringRedisTemplate         = `{"key":"%s","conn":"%s","dbNum":"%d","user":"%s","password":"%s"}`
 )
 
 func RedisCnfString() string {
@@ -81,7 +81,7 @@ func (this *RedisConfiguration) init() {
 }
 
 func (this *RedisConfiguration) String() string {
-		return fmt.Sprintf(StringTemplate, this.Args()...)
+		return fmt.Sprintf(StringRedisTemplate, this.Args()...)
 }
 
 func (this *RedisConfiguration) Args() []interface{} {
@@ -96,7 +96,9 @@ func (this *RedisConfiguration) Args() []interface{} {
 func (this *RedisConfiguration) Scope(name string) CacheConfigure {
 		kv := new(RedisConfiguration)
 		kv.init()
-		kv.ScopeName = this.ScopeName + "." + name
+		if name != "" {
+				kv.ScopeName = this.ScopeName + "." + name
+		}
 		kv.KvCnf = this.KvCnf
 		return kv
 }

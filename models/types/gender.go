@@ -1,11 +1,11 @@
-package enums
+package types
 
 import (
 		"fmt"
 		"strconv"
 )
 
-type Gender int8
+type Gender int
 
 const (
 		Unknown Gender = iota

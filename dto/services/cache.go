@@ -1,7 +1,8 @@
-package repositories
+package services
 
 import (
-		"github.com/WebGameLinux/cms/dto/configuration"
+		"github.com/WebGameLinux/cms/configuration"
+		"github.com/WebGameLinux/cms/dto/enums"
 		"github.com/WebGameLinux/cms/utils/mapper"
 		"github.com/astaxie/beego/cache"
 		_ "github.com/astaxie/beego/cache/memcache"
@@ -10,12 +11,12 @@ import (
 		"time"
 )
 
-type CacheRepositoryManager struct {
+type CacheManagerService struct {
 		repos     map[string]cache.Cache
 		configure mapper.Mapper
 }
 
-type CacheManager interface {
+type CacheManagerServiceInterface interface {
 		cache.Cache
 		Store(name ...string) cache.Cache
 		Register(name string, instance cache.Cache)
@@ -31,14 +32,17 @@ const (
 		DriverStoreDefault  = DriverStoreFile
 )
 
-func NewCacheManager(config ...mapper.Mapper) CacheManager {
-		if cacheRepository == nil {
-				cacheRepository = createManager(config...)
+var cacheManager CacheManagerServiceInterface
+
+func NewCacheManager(config ...mapper.Mapper) CacheManagerServiceInterface {
+		if cacheManager == nil {
+				cacheManager = createManager(config...)
 				// 注册 缓存
-				cacheRepository.Register(DriverStoreDefault, driver(DriverStoreDefault))
-				cacheRepository.Register(DriverStoreRedis, driver(DriverStoreRedis))
+				cacheManager.Register(DriverStoreDefault, driver(DriverStoreDefault))
+				cacheManager.Register(DriverStoreRedis, driver(DriverStoreRedis))
+				cacheManager.Register(enums.TokenStore, CreateRedisService(enums.TokenStore))
 		}
-		return cacheRepository
+		return cacheManager
 }
 
 func driver(name string) cache.Cache {
@@ -46,14 +50,14 @@ func driver(name string) cache.Cache {
 		return c
 }
 
-func GetCacheManager(config ...mapper.Mapper) *CacheRepositoryManager {
+func GetCacheManagerService(config ...mapper.Mapper) *CacheManagerService {
 		m := NewCacheManager(config...)
-		manager, _ := m.(*CacheRepositoryManager)
+		manager, _ := m.(*CacheManagerService)
 		return manager
 }
 
-func createManager(config ...mapper.Mapper) *CacheRepositoryManager {
-		var manager = new(CacheRepositoryManager)
+func createManager(config ...mapper.Mapper) *CacheManagerService {
+		var manager = new(CacheManagerService)
 		if len(config) == 0 {
 				config = append(config, GetCacheConfigure())
 		}
@@ -68,43 +72,43 @@ func GetCacheConfigure() mapper.Mapper {
 		return m
 }
 
-func (this *CacheRepositoryManager) Get(key string) interface{} {
+func (this *CacheManagerService) Get(key string) interface{} {
 		return this.Store().Get(key)
 }
 
-func (this *CacheRepositoryManager) GetMulti(keys []string) []interface{} {
+func (this *CacheManagerService) GetMulti(keys []string) []interface{} {
 		return this.Store().GetMulti(keys)
 }
 
-func (this *CacheRepositoryManager) Put(key string, val interface{}, timeout time.Duration) error {
+func (this *CacheManagerService) Put(key string, val interface{}, timeout time.Duration) error {
 		return this.Store().Put(key, val, timeout)
 }
 
-func (this *CacheRepositoryManager) Delete(key string) error {
+func (this *CacheManagerService) Delete(key string) error {
 		return this.Store().Delete(key)
 }
 
-func (this *CacheRepositoryManager) Incr(key string) error {
+func (this *CacheManagerService) Incr(key string) error {
 		return this.Store().Incr(key)
 }
 
-func (this *CacheRepositoryManager) Decr(key string) error {
+func (this *CacheManagerService) Decr(key string) error {
 		return this.Store().Decr(key)
 }
 
-func (this *CacheRepositoryManager) IsExist(key string) bool {
+func (this *CacheManagerService) IsExist(key string) bool {
 		return this.Store().IsExist(key)
 }
 
-func (this *CacheRepositoryManager) ClearAll() error {
+func (this *CacheManagerService) ClearAll() error {
 		return this.Store().ClearAll()
 }
 
-func (this *CacheRepositoryManager) StartAndGC(config string) error {
+func (this *CacheManagerService) StartAndGC(config string) error {
 		return this.Store().StartAndGC(config)
 }
 
-func (this *CacheRepositoryManager) Store(name ...string) cache.Cache {
+func (this *CacheManagerService) Store(name ...string) cache.Cache {
 		if len(name) == 0 {
 				name = append(name, StoreDefault)
 		}
@@ -115,7 +119,7 @@ func (this *CacheRepositoryManager) Store(name ...string) cache.Cache {
 		return this.getDefault()
 }
 
-func (this *CacheRepositoryManager) getDefault() cache.Cache {
+func (this *CacheManagerService) getDefault() cache.Cache {
 		if store, ok := this.repos[StoreDefault]; ok && store != nil {
 				return store
 		}
@@ -126,7 +130,7 @@ func (this *CacheRepositoryManager) getDefault() cache.Cache {
 		return c
 }
 
-func (this *CacheRepositoryManager) Register(name string, instance cache.Cache) {
+func (this *CacheManagerService) Register(name string, instance cache.Cache) {
 		if name == "" || instance == nil {
 				return
 		}

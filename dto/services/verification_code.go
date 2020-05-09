@@ -1,6 +1,7 @@
 package services
 
 import (
+		"github.com/WebGameLinux/cms/dto/common"
 		captcha2 "github.com/WebGameLinux/cms/models/captcha"
 		"github.com/WebGameLinux/cms/utils/captcha"
 		"github.com/WebGameLinux/cms/utils/captcha/drivers"
@@ -87,7 +88,7 @@ func loadVerificationService(service *VerificationCodeService) *VerificationCode
 }
 
 // 验证码生成封装
-func (this *VerificationCodeService) Code(args ...interface{}) ResultStruct {
+func (this *VerificationCodeService) Code(args ...interface{}) common.JsonResponseInterface {
 		return nil
 }
 

@@ -23,10 +23,13 @@ const (
 
 		ErrorTaskRepeat Code = 30001
 
-		UpdateModelField Code = 3100 // 更新失败
-		RecordNotExists  Code = 3101 // 数据记录不存在
-		DataServiceError Code = 3102 // 数据查询服务异常
+		UpdateModelField  Code = 3100 // 更新失败
+		RecordNotExists   Code = 3101 // 数据记录不存在
+		DataServiceError  Code = 3102 // 数据查询服务异常
 		CreateRecordField Code = 3103 // 创建记录失败
+		ParamEmpty        Code = 3300 // 服务空参数调用异常
+		KeyExists         Code = 3301 // 记录已存在
+		CreateTokenFailed Code = 3302 // 创建登陆token失败
 
 		//USER ERROR 4xxx
 
@@ -39,6 +42,7 @@ const (
 		ErrorUserUnLogin      Code = 40006
 		ErrorUserDelete       Code = 40007
 
+		Error Code = 50000
 		//上传参数错误(api 选择)
 		ErrorUploadParam      Code = 50001
 		ErrorCanNotUpload     Code = 50002

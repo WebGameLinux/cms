@@ -15,7 +15,7 @@ func (this *CacheConfiguration) Destroy() {
 		this.ConfigureDto.KvCnf = nil
 }
 
-func GetCacheConfig(name string) string {
+func GetCacheConfig(name string,scope ...string) string {
 		switch name {
 		case "file":
 				return FileCnfKvString()

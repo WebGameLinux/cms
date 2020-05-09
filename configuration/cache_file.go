@@ -3,7 +3,7 @@ package configuration
 import (
 		"fmt"
 		"github.com/WebGameLinux/cms/utils/mapper"
-		"github.com/astaxie/beego/config"
+		config2 "github.com/astaxie/beego/config"
 )
 
 type FileCacheConfiguration struct {
@@ -54,8 +54,8 @@ func GetFileCacheKvCnf(Properties ...interface{}) *FileCacheConfiguration {
 						if m, ok := kv.(mapper.Mapper); ok {
 								fileKvCnf.KvCnf = m
 						}
-				case config.Configer:
-						if m, ok := kv.(config.Configer); ok {
+				case config2.Configer:
+						if m, ok := kv.(config2.Configer); ok {
 								fileKvCnf.KvCnf = AppConfig2Map(m, CnfKvFileCacheGlobal)
 						}
 				default:

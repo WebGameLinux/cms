@@ -26,8 +26,10 @@ var msgFlags = map[Code]string{
 		RecordNotExists:   "数据记录不存在",
 		DataServiceError:  "数据查询服务异常",
 		CreateRecordField: "创建记录失败",
-
-		ErrorUserLogin: "用户不存在或用户名密码错误",
+		ParamEmpty:        "空参数异常",
+		KeyExists:         "记录已存在",
+		CreateTokenFailed: "登陆异常",
+		ErrorUserLogin:    "用户不存在或用户名密码错误",
 
 		ErrorUserCookie: "用户 COOKIE 错误",
 
@@ -35,7 +37,7 @@ var msgFlags = map[Code]string{
 		ErrorUserNotExist:     "用户不存在",
 		ErrorUserResetToken:   "重置 Token 错误",
 		ErrorUserUnLogin:      "用户未登录",
-
+		Error:                 "服务异常",
 		ErrorUploadParam:      "上传参数错误",
 		ErrorCanNotUpload:     "无法上传图片到第三方图床",
 		ErrorUploadTokenError: "上传 Token 错误",
@@ -108,9 +110,33 @@ func (this Code) WrapMsg(err ...interface{}) string {
 		return this.String() + "\n" + reflects.Any2Str(wrap)
 }
 
+func (this Code) Replace(err ...interface{}) string {
+		if len(err) == 0 {
+				return this.String()
+		}
+		wrap := err[0]
+		if wrap == nil {
+				return this.String()
+		}
+		if e, ok := wrap.(error); ok {
+				return e.Error()
+		}
+		if str, ok := wrap.(string); ok && str != "" {
+				return str
+		}
+		if str, ok := wrap.(fmt.Stringer); ok {
+				return str.String()
+		}
+		return this.String()
+}
+
 func (this Code) Struct() *models.BusinessCode {
 		var code = new(models.BusinessCode)
 		code.Code = this.Int()
 		code.Message = this.String()
 		return code
+}
+
+func (this Code) Equal(code Code) bool {
+		return this == code
 }

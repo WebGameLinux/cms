@@ -5,7 +5,7 @@ import (
 		utils "github.com/WebGameLinux/cms/utils/beego"
 		"github.com/WebGameLinux/cms/utils/reflects"
 		"github.com/astaxie/beego/orm"
-		"github.com/astaxie/beego/validation"
+		validation "gopkg.in/go-playground/validator.v9"
 		"reflect"
 		"strings"
 )
@@ -46,7 +46,7 @@ type AutoLoaderModel interface {
 }
 
 type VerifyAbleModel interface {
-		Valid() (*validation.Validation, error)
+		Valid() (*validation.Validate, error)
 }
 
 func IsOrmUsingError(err error) bool {

@@ -461,6 +461,67 @@ func (this Mapper) String() string {
 		return fmt.Sprintf("%+v", map[string]interface{}(this))
 }
 
+func (this Mapper) Strings(key string, def ...[]string) []string {
+		if len(def) == 0 {
+				def = append(def, []string{})
+		}
+		var (
+				ok      bool
+				strDest string
+				value   = this.GetAny(key)
+		)
+		if value == nil {
+				return def[0]
+		}
+		strDest, ok = value.(string)
+		if !ok {
+				if str, ok := value.(*string); ok {
+						strDest = *str
+				}
+		}
+		if ok {
+				if strings.Contains(strDest, ",") {
+						return strings.SplitN(strDest, ",", -1)
+				}
+				if strings.Contains(strDest, ";") {
+						return strings.SplitN(strDest, ";", -1)
+				}
+				if strDest != "" {
+						return []string{strDest}
+				}
+				return def[0]
+		}
+		if v, ok := value.([]string); ok {
+				return v
+		}
+		if v, ok := value.(*[]string); ok {
+				return *v
+		}
+		if v, ok := value.([]*string); ok {
+				var strArr []string
+				for _, s := range v {
+						if s != nil && *s != "" {
+								strArr = append(strArr, *s)
+						}
+				}
+				if len(strArr) > 0 {
+						return strArr
+				}
+		}
+		if v, ok := value.(*[]*string); ok {
+				var strArr []string
+				for _, s := range *v {
+						if s != nil && *s != "" {
+								strArr = append(strArr, *s)
+						}
+				}
+				if len(strArr) > 0 {
+						return strArr
+				}
+		}
+		return def[0]
+}
+
 // 与 前者 map 对比不同 结果 (不比较各自的特有的键,比较共同有键)
 func (this Mapper) Diff(m Mapper, compares ...CompareHandler) Mapper {
 		var (

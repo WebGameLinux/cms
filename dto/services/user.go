@@ -1,62 +1,144 @@
 package services
 
 import (
-		"github.com/WebGameLinux/cms/dto/enums"
-		"github.com/WebGameLinux/cms/dto/repositories"
+		"errors"
+		enums2 "github.com/WebGameLinux/cms/dto/enums"
+		"github.com/WebGameLinux/cms/models"
 		"github.com/WebGameLinux/cms/utils/mapper"
 )
 
-type UserService struct {
-		repo repositories.UserRepository
+var (
+		userService *UserService
+)
+
+// 获取用户
+type UserServiceInterface interface {
+		GetById(int64) *models.User
+		Password(int64) string
+		GetError() error
+		VerifyPasswordById(id int64, pass string, encode bool) bool
+		Exists(string, interface{}, ...bool) bool
+		GetUserProperties(id int64, keys []string) mapper.Mapper
+		Update(id int64, data map[string]interface{}) *models.User
+		CreateByMap(data map[string]interface{}) int64
+		Create(data *models.User) int64
+		VerifyPassword(pass string, txt string) bool
+		GetByUserName(name string) *models.User
+		GetByEmail(email string) *models.User
+		GetByMobile(mobile string) *models.User
 }
 
-type UserBaseService interface {
-		GetById(int64) ResultStruct
-		VerifyPasswordById(id int64, pass string, encode ...bool) bool
-		CreateUser(map[string]interface{}) ResultStruct
+type UserService struct {
+		model *models.UserWrapper
 }
 
 func NewUserService() *UserService {
-		return &UserService{repo: repositories.GetUserBaseRepository()}
+		service := new(UserService)
+		service.model = models.GetUser()
+		return service
 }
 
-func GetUserBaseService(options ...interface{}) UserBaseService {
-		return &UserService{repo: repositories.GetUserBaseRepository(options...)}
+func GetUserService() UserServiceInterface {
+		if nil == userService {
+				userService = NewUserService()
+		}
+		return userService
 }
 
-// 通过uid 获取用户信息
-func (user *UserService) GetById(id int64) ResultStruct {
-		var data = user.repo.GetById(id)
+func (this *UserService) Exists(key string, v interface{}, softDelete ...bool) bool {
+		if this.model.GetByKey(key, v, softDelete...) != nil {
+				return true
+		}
+		return false
+}
+
+func (this *UserService) GetUserProperties(id int64, keys []string) mapper.Mapper {
+		panic("implement me")
+}
+
+func (this *UserService) VerifyPasswordById(id int64, pass string, encode bool) bool {
+		if pass == "" {
+				return false
+		}
+		var data = this.model.GetById(id)
 		if data == nil {
-				return NewEmptyResult(enums.RecordNotExists.Int(), enums.RecordNotExists.WrapMsg(user.repo.GetError()))
+				return false
 		}
-		return NewSuccessResult(mapper.NewKvMap("user", data))
+		if data.PasswordHash == "" {
+				return false
+		}
+		return true
 }
 
-// 创建用户
-func (user *UserService) CreateUser(data map[string]interface{}) ResultStruct {
-		id := user.repo.CreateByMap(data)
-		err := user.repo.GetError()
-		if id <= 0 || err != nil {
-				return NewEmptyResult(enums.CreateRecordField.Int(), enums.CreateRecordField.WrapMsg(err))
-		}
-		return NewSuccessResult(user.GetById(id).Item(), enums.SUCCESS.String())
+func (this *UserService) Lists() {
+
 }
 
-// 验证登陆密码
-func (user *UserService) VerifyPasswordById(id int64, pass string, encode ...bool) bool {
-		if len(encode) == 0 {
-				encode = append(encode, false)
+func (this *UserService) GetOne(user *models.User) bool {
+		if err := this.model.GetOrm().Read(user); err == nil {
+				return true
 		}
-		return user.repo.VerifyPasswordById(id, pass, encode[0])
+		return false
 }
 
-// 更新用户记录
-func (user *UserService) UpdateById(id int64, data Map) ResultStruct {
-		res := user.repo.Update(id, data)
-		err := user.repo.GetError()
-		if res == nil || err != nil {
-				return NewEmptyResult(enums.UpdateModelField.Int(), enums.UpdateModelField.WrapMsg(err))
+func (this *UserService) GetById(id int64) *models.User {
+		return this.model.GetById(id)
+}
+
+func (this *UserService) Update(id int64, data map[string]interface{}) *models.User {
+		// 字段重命名
+		if v, ok := data["password"]; ok {
+				m := mapper.Mapper(data)
+				m.ReName("password", "passwordHash")
+				if v == nil || v == "" {
+						m.Delete("password")
+				}
 		}
-		return NewSuccessResult(res, enums.SUCCESS.String())
+		return this.model.Update(id, data)
+}
+
+func (this *UserService) Password(id int64) string {
+		model := this.model.GetById(id)
+		if model == nil {
+				return ""
+		}
+		return model.PasswordHash
+}
+
+func (this *UserService) GetError() error {
+		return this.model.GetError()
+}
+
+func (this *UserService) CreateByMap(data map[string]interface{}) int64 {
+		model := new(models.User)
+		m := mapper.Mapper(data)
+		m.ReName(enums2.Password, enums2.PasswordHash)
+		if mapper.SetByMap(model, m) {
+				this.model.Error = errors.New("数据格式不匹配")
+				return 0
+		}
+		id := this.model.Create(model)
+		return id
+}
+
+// 通过user 模型创建
+func (this *UserService) Create(data *models.User) int64 {
+		id := this.model.Create(data)
+		return id
+}
+
+func (this *UserService) GetByMobile(mobile string) *models.User {
+		return this.model.GetByKey(enums2.Mobile, mobile)
+}
+
+func (this *UserService) GetByEmail(email string) *models.User {
+		return this.model.GetByKey(enums2.Email, email)
+}
+
+func (this *UserService) GetByUserName(name string) *models.User {
+		return this.model.GetByKey(enums2.UserName, name)
+}
+
+func (this *UserService) VerifyPassword(pass string, txt string) bool {
+		return this.model.PasswordVerify(pass, txt)
 }

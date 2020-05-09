@@ -5,12 +5,14 @@ import (
 		"errors"
 		"github.com/WebGameLinux/cms/models/conditions"
 		utils "github.com/WebGameLinux/cms/utils/beego"
+		"github.com/WebGameLinux/cms/utils/getter"
 		"github.com/WebGameLinux/cms/utils/mapper"
 		"github.com/WebGameLinux/cms/utils/reflects"
 		string2 "github.com/WebGameLinux/cms/utils/string"
 		"github.com/WebGameLinux/cms/utils/types"
+		"github.com/WebGameLinux/cms/utils/validator"
 		"github.com/astaxie/beego/orm"
-		"github.com/astaxie/beego/validation"
+		validation "gopkg.in/go-playground/validator.v9"
 		"time"
 )
 
@@ -33,11 +35,7 @@ func CreateUserPaginator() *UserPaginator {
 
 type UserModel interface {
 		GetById(int64) *User
-}
-
-// 用户表名
-func (user *User) TableName() string {
-		return utils.GetTable("users")
+		GetByKey(key string, v interface{}, softDelete ...bool) *User
 }
 
 // 默认用户封装实体构造
@@ -108,7 +106,7 @@ func (wrapper *UserWrapper) GetById(id int64) *User {
 }
 
 // 通过某一个字段获取用户信息
-func (wrapper *UserWrapper) GetByKey(key string, value interface{}) *User {
+func (wrapper *UserWrapper) GetByKey(key string, value interface{}, softDelete ...bool) *User {
 		var user = new(User)
 		if !wrapper.HasField(key) {
 				return user
@@ -118,8 +116,12 @@ func (wrapper *UserWrapper) GetByKey(key string, value interface{}) *User {
 				wrapper.Error = err
 				return user
 		}
-		query.Select(key).From(wrapper.Table()).Where(key + " = ?").
-				OrderBy("id").SetModel(user).First(value)
+		query = query.Select("*").From(wrapper.Table()).Where(key + " = ?").SetModel(user)
+		if len(softDelete) != 0 && !softDelete[0] {
+				query.OrderBy("id").First(value)
+		} else {
+				query.WithDeleteAt().OrderBy("id").First(value)
+		}
 		wrapper.Error = query.GetError()
 		if wrapper.Error != nil {
 				return nil
@@ -171,6 +173,7 @@ func (wrapper *UserWrapper) Create(user *User) int64 {
 		if !wrapper.PasswordHashed(user.PasswordHash) {
 				user.PasswordHash = wrapper.Password(user.PasswordHash)
 		}
+		user.init()
 		id, err := wrapper.GetOrm().Insert(user)
 		if err != nil {
 				utils.Onerror(err)
@@ -218,6 +221,20 @@ func (wrapper *UserWrapper) Search(cond map[string]interface{}) []User {
 		return users
 }
 
+// 用户表名
+func (this *User) TableName() string {
+		return utils.GetTable("users")
+}
+
+func (this *User) init() {
+		if this.SeqId == "" {
+				this.SeqId = string2.SeqId(this.TableName())
+		}
+		if this.Version == 0 {
+				this.Version = 1
+		}
+}
+
 func (this *User) LoadByMap(data map[string]interface{}) error {
 		if len(data) == 0 {
 				return errors.New("empty data map")
@@ -233,14 +250,33 @@ func (this *User) LoadByMap(data map[string]interface{}) error {
 		return nil
 }
 
-func (this *User) Valid() (*validation.Validation, error) {
+func (this *User) Valid() (*validation.Validate, error) {
 		var (
-				v   = new(validation.Validation)
-				b   bool
+				v   = validator.GetValidator()
 				err error
 		)
-		if b, err = v.Valid(this); err != nil && !b {
+		if err = v.Struct(this); err != nil {
 				return v, err
 		}
 		return nil, nil
+}
+
+func (this *User) Filter(filter ...interface{}) map[string]interface{} {
+		if this == nil {
+				return nil
+		}
+		instance := getter.NewGetter(this)
+		if len(filter) == 0 {
+				return instance.EmptyExclude().FilterKey("!passwordHash", getter.JsonTag).Map()
+		}
+		for _, f := range filter {
+				switch f.(type) {
+				case string:
+						key := f.(string)
+						instance.FilterKey(key)
+				case getter.FilterHandler:
+						instance.Filter(f.(getter.FilterHandler))
+				}
+		}
+		return instance.Map()
 }

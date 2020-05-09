@@ -2,10 +2,8 @@ package test
 
 import (
 		"fmt"
-		"github.com/WebGameLinux/cms/dto/repositories"
 		"github.com/WebGameLinux/cms/dto/services"
 		"testing"
-		"time"
 )
 
 func TestGetVerificationService(t *testing.T) {
@@ -14,7 +12,5 @@ func TestGetVerificationService(t *testing.T) {
 		fmt.Println(id)
 		fmt.Println(b64)
 		fmt.Println(err)
-		repositories.GetCacheManager().Store(repositories.DriverStoreRedis).Put("mysql", time.Now().Unix(), 3*time.Minute)
-		repositories.GetCacheManager().Store(repositories.DriverStoreFile).Put("file123", time.Now().Unix(), 3*time.Minute)
 
 }

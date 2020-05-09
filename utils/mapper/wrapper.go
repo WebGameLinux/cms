@@ -6,6 +6,12 @@ func WrapperNewMap(root string, data map[string]interface{}) map[string]map[stri
 		return wrapper
 }
 
+func WrapperNewMapper(root string, data map[string]interface{}) map[string]interface{} {
+		var wrapper = make(map[string]interface{})
+		wrapper[root] = data
+		return wrapper
+}
+
 func NewMap() map[string]interface{} {
 		return make(map[string]interface{})
 }

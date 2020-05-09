@@ -38,6 +38,7 @@ type SqlQueryBuilder interface {
 		One(v ...interface{}) interface{}
 		GetError(clean ...bool) error
 		Get(v ...interface{}) interface{}
+		WithDeleteAt() SqlQueryBuilder
 		SetModel(m interface{}) SqlQueryBuilder
 		Paginator(page int, count int, columns []string, args ...interface{}) (interface{}, bool)
 }
@@ -271,6 +272,10 @@ func (this *SqlQueryBuilderWrapper) SetModel(m interface{}) SqlQueryBuilder {
 				this.Model = m
 		}
 		return this
+}
+
+func (this *SqlQueryBuilderWrapper) WithDeleteAt() SqlQueryBuilder {
+		return this.And("deleted_at is null ")
 }
 
 func (this *SqlQueryBuilderWrapper) NewModels() interface{} {
