@@ -46,15 +46,19 @@ func TestNewPublish(t *testing.T) {
 		ch, _ := consumer.Consumer()
 		fmt.Println(producer.Push("start publish"))
 		var i = 0
+		t1 := time.NewTicker(2 * time.Second)
+		t2 := time.NewTicker(1 * time.Minute)
 		for {
 				select {
 				case v := <-ch:
 						fmt.Println(string(v.Body))
-				case <-time.NewTicker(2 * time.Second).C:
+				case <-t1.C:
 						producer.Push(fmt.Sprintf("msg:%d,%s", i, time.Now().Format(time.RFC1123Z)))
 						i++
-				case <-time.NewTimer(1 * time.Minute).C:
-						break
+				case <-t2.C:
+						fmt.Println("stop")
+						goto EndPush
 				}
 		}
+EndPush:
 }

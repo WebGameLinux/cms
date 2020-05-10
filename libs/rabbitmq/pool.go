@@ -289,6 +289,8 @@ func (this *WorkerPool) run(id int) {
 		} else {
 				this.RunnerMapper[id] = runner
 		}
+		t1 := time.NewTicker(interval)
+		t2 := time.NewTicker(checkCacheInterval)
 		for {
 				select {
 				case task := <-runner.Chan:
@@ -303,18 +305,20 @@ func (this *WorkerPool) run(id int) {
 								close(runner.Chan)
 								goto CtrKill
 						}
-				case <-time.NewTicker(checkCacheInterval).C:
+				case <-t2.C:
 						task := this.GetCacheTask()
 						if task != nil {
 								this.Add(id)
 								task()
 						}
 						this.Remove(id)
-				case <-time.NewTicker(interval).C:
+				case <-t1.C:
 						times++
 				}
 				if times > this.CacheMaxNum*3 {
 						this.Stop(id)
+						t1.Stop()
+						t2.Stop()
 				}
 		}
 CtrKill:
