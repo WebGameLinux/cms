@@ -165,7 +165,7 @@ func (this *ConsumerWorker) Init() QueueConsumerWorkerInterface {
 		this.errs = errs
 		this.On = on
 		this.Ctr = on
-		this.WorkerPool = NewWorkPool(config.MaxNum, config.Name)
+		this.WorkerPool = NewWorkPool(config.MaxNum, config.Name, config.CacheMaxNum, config.Interval, config.CheckCacheInterval)
 		this.initialize()
 		return this
 }

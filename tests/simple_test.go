@@ -53,7 +53,7 @@ func TestNewPublish(t *testing.T) {
 				case <-time.NewTicker(2 * time.Second).C:
 						producer.Push(fmt.Sprintf("msg:%d,%s", i, time.Now().Format(time.RFC1123Z)))
 						i++
-				case <-time.NewTimer(10 * time.Minute).C:
+				case <-time.NewTimer(1 * time.Minute).C:
 						break
 				}
 		}
