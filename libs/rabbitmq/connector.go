@@ -155,6 +155,9 @@ func (this *Connector) GetKey() string {
 }
 
 func (this *Connector) GetQueue() string {
+		if this.QueueName == "" {
+				return this.Option.GetQueue()
+		}
 		return this.QueueName
 }
 
