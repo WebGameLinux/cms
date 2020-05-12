@@ -45,8 +45,11 @@ func (this *FileSystemManager) store(key string, system FileSystem) bool {
 		return true
 }
 
-var manager = new(FileSystemManager)
+var manager *FileSystemManager
 
 func GetFileSystemManager() *FileSystemManager {
+		if manager == nil {
+				manager = new(FileSystemManager)
+		}
 		return manager
 }

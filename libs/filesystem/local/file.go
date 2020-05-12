@@ -6,6 +6,7 @@ import (
 		"fmt"
 		log "github.com/sirupsen/logrus"
 		"io"
+		"io/ioutil"
 		"os"
 		"path/filepath"
 		"reflect"
@@ -18,7 +19,18 @@ type FileSystem interface {
 		Root() string
 		GetConfig() string
 		GetError() error
+		Open(filename string, args ...interface{}) FileInterface
 		Proxy(name string, args ...interface{}) interface{}
+}
+
+// 能读 , 能写
+type FileInterface interface {
+		io.Closer
+		io.Reader
+		io.Seeker
+		io.Writer
+		Readdir(count int) ([]os.FileInfo, error)
+		Stat() (os.FileInfo, error)
 }
 
 const BufferSize = 1024
@@ -132,7 +144,7 @@ func (this *FileSystemLocal) Register(method string, fn interface{}, must ...boo
 		return this
 }
 
-func (this *FileSystemLocal) Open(filename string, args ...interface{}) *os.File {
+func (this *FileSystemLocal) Open(filename string, args ...interface{}) FileInterface {
 		if filename == "" {
 				return nil
 		}
@@ -179,15 +191,15 @@ func (this *FileSystemLocal) Write(filename string, content ...[]byte) int {
 		return this.write(file, content...)
 }
 
-func (this *FileSystemLocal) GetAppendWriter(filename string) *os.File {
+func (this *FileSystemLocal) GetAppendWriter(filename string) FileInterface {
 		return this.OpenWrite(filename, os.O_CREATE|os.O_APPEND)
 }
 
-func (this *FileSystemLocal) GetCoverWriter(filename string) *os.File {
+func (this *FileSystemLocal) GetCoverWriter(filename string) FileInterface {
 		return this.OpenWrite(filename, os.O_CREATE)
 }
 
-func (this *FileSystemLocal) GetFile(filename string, flag ...int) *os.File {
+func (this *FileSystemLocal) GetFile(filename string, flag ...int) FileInterface {
 		var (
 				f    int
 				args []interface{}
@@ -213,7 +225,7 @@ func (this *FileSystemLocal) checkFlag(flag int) bool {
 				flag&os.O_SYNC == 0 && flag&os.O_TRUNC == 0)
 }
 
-func (this *FileSystemLocal) Close(file *os.File) {
+func (this *FileSystemLocal) Close(file FileInterface) {
 		err := file.Close()
 		if err != nil {
 				this.Error = err
@@ -236,7 +248,7 @@ func (this *FileSystemLocal) Save(filename string, content []byte, flag ...int) 
 		if len(content) == 0 {
 				return 0
 		}
-		var file *os.File
+		var file FileInterface
 		if len(flag) != 0 {
 				if flag[0]&os.O_RDONLY != 0 {
 						return 0
@@ -258,7 +270,7 @@ func (this *FileSystemLocal) Save(filename string, content []byte, flag ...int) 
 		return this.write(file, content)
 }
 
-func (this *FileSystemLocal) write(file *os.File, content ...[]byte) int {
+func (this *FileSystemLocal) write(file FileInterface, content ...[]byte) int {
 		if file == nil {
 				return 0
 		}
@@ -274,7 +286,7 @@ func (this *FileSystemLocal) write(file *os.File, content ...[]byte) int {
 		return size
 }
 
-func (this *FileSystemLocal) OpenWrite(filename string, args ...interface{}) *os.File {
+func (this *FileSystemLocal) OpenWrite(filename string, args ...interface{}) FileInterface {
 		var (
 				flag int
 				mode os.FileMode
@@ -400,7 +412,11 @@ func (this *FileSystemLocal) CreateDir(dirname string) string {
 
 func (this *FileSystemLocal) Read(filename string) []byte {
 		var content []byte
-
+		info := GetFileInfo(filename)
+		if !info.Exists || info.IsDir {
+				return content
+		}
+		content, this.Error = ioutil.ReadFile(filename)
 		return content
 }
 
@@ -466,9 +482,11 @@ func GetFileLocalSystem() *FileSystemLocal {
 		return localSystem
 }
 
-func GetDisk(name string) FileSystem {
-		GetFileSystemManager().Get(name)
-		return nil
+func GetDisk(name ...string) FileSystem {
+		if len(name) == 0 {
+				name = append(name, DefaultDisk)
+		}
+		return GetFileSystemManager().Get(name[0])
 }
 
 func FileCopy(src, dst string) (bool, error) {
@@ -499,7 +517,6 @@ func FileCopy(src, dst string) (bool, error) {
 				if n == 0 {
 						break
 				}
-
 				if _, err := destination.Write(buf[:n]); err != nil {
 						return false, err
 				}

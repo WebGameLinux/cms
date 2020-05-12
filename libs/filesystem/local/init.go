@@ -1,5 +1,7 @@
 package local
 
-func init()  {
-		GetFileSystemManager().Add("local",GetFileLocalSystem())
+const DefaultDisk = "local"
+
+func init() {
+		GetFileSystemManager().Add(DefaultDisk, GetFileLocalSystem().setName(DefaultDisk))
 }

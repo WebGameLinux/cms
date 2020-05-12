@@ -52,6 +52,14 @@ func (this *FileInfo) GetFileInfo(filename string) *FileInfo {
 		return info
 }
 
+func (this *FileInfo) IsIrregular() bool {
+		return ModeCompare(this.Mode, os.ModeIrregular)
+}
+
+func (this *FileInfo) IsPipe() bool {
+		return ModeCompare(this.Mode, os.ModeNamedPipe)
+}
+
 func (this *FileInfo) State(filename string) (os.FileInfo, bool) {
 		if filename == "" {
 				return nil, false
@@ -69,6 +77,10 @@ func (this *FileInfo) State(filename string) (os.FileInfo, bool) {
 				}
 		}
 		return state, true
+}
+
+func (this *FileInfo) Size2Str(format ...string) string {
+		return FileSizeNum(this.Size).Format(format...)
 }
 
 var nilInfo = NewFileInfo()
@@ -131,7 +143,11 @@ func IsMode(filename string, mode os.FileMode) bool {
 				return false
 		}
 		m := state.Mode()
-		return m&m == 0 || m == mode
+		return ModeCompare(m, mode)
+}
+
+func ModeCompare(m os.FileMode, m2 os.FileMode) bool {
+		return m&m2 == 0 || m == m2
 }
 
 func IsSymlink(filename string) bool {
