@@ -29,6 +29,7 @@ type FileInterface interface {
 		io.Reader
 		io.Seeker
 		io.Writer
+		Name() string
 		Readdir(count int) ([]os.FileInfo, error)
 		Stat() (os.FileInfo, error)
 }
@@ -116,8 +117,8 @@ func (this *FileSystemLocal) Proxy(name string, args ...interface{}) interface{}
 		}
 		refValue := reflect.ValueOf(v)
 		var values []reflect.Value
-		for range args {
-				values = append(values, reflect.ValueOf(args))
+		for _, arg := range args {
+				values = append(values, reflect.ValueOf(arg))
 		}
 		return refValue.Call(values)
 }
@@ -148,8 +149,8 @@ func (this *FileSystemLocal) Open(filename string, args ...interface{}) FileInte
 		if filename == "" {
 				return nil
 		}
-		if this.root != "" && !this.IsAbs(filename) {
-				filename = filepath.Join(this.root, filename)
+		if !this.IsAbs(filename) {
+				filename = this.Abs(filename)
 		}
 		var (
 				flag int
@@ -458,6 +459,7 @@ func (this *FileSystemLocal) init() {
 		this.Register("GetDir", this.GetDir)
 		this.Register("Save", this.Save)
 		this.Register("SetRoot", this.setRoot)
+		this.Register("chRoot", this.setRoot)
 		this.Register("MkDir", this.NewDir)
 		this.Register("MKdir", this.NewDir)
 		this.Register("mkdir", this.NewDir)
