@@ -12,6 +12,7 @@ import (
 		"github.com/WebGameLinux/cms/utils/types"
 		"github.com/WebGameLinux/cms/utils/validator"
 		"github.com/astaxie/beego/orm"
+		uuid "github.com/satori/go.uuid"
 		validation "gopkg.in/go-playground/validator.v9"
 		"time"
 )
@@ -228,7 +229,7 @@ func (this *User) TableName() string {
 
 func (this *User) init() {
 		if this.SeqId == "" {
-				this.SeqId = string2.SeqId(this.TableName())
+				this.SeqId = uuid.NewV4().String()
 		}
 		if this.Version == 0 {
 				this.Version = 1

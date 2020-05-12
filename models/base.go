@@ -5,9 +5,12 @@ import (
 		utils "github.com/WebGameLinux/cms/utils/beego"
 		"github.com/WebGameLinux/cms/utils/reflects"
 		"github.com/astaxie/beego/orm"
+		uuid "github.com/satori/go.uuid"
 		validation "gopkg.in/go-playground/validator.v9"
 		"reflect"
+		"strconv"
 		"strings"
+		"time"
 )
 
 type BaseWrapper struct {
@@ -53,24 +56,24 @@ func IsOrmUsingError(err error) bool {
 		return strings.Contains(err.Error(), ormUsingError)
 }
 
-func (base *BaseWrapper) BindModel(m interface{}) {
-		if m != nil && base.Model == nil {
+func (this *BaseWrapper) BindModel(m interface{}) {
+		if m != nil && this.Model == nil {
 				if reflect.TypeOf(m).Elem().Kind() == reflect.Struct {
-						base.Model = m
+						this.Model = m
 				}
 		}
 }
 
-func (base *BaseWrapper) GetOrm() orm.Ormer {
+func (this *BaseWrapper) GetOrm() orm.Ormer {
 		var o = orm.NewOrm()
-		connection := base.GetOrmUsing()
+		connection := this.GetOrmUsing()
 		err := o.Using(connection)
 		// 重置
 		if err != nil {
 				// 强制 链接
-				if base.OptBool("force") {
+				if this.OptBool("force") {
 						ormOkSetter(err, o, connection)
-						base.SetOpt("connection", "default")
+						this.SetOpt("connection", "default")
 				}
 		}
 		return o
@@ -86,37 +89,37 @@ func ormOkSetter(err error, o orm.Ormer, using string) {
 		}
 }
 
-func (base *BaseWrapper) GetOrmUsing() string {
-		return base.OptStr("connection", "default")
+func (this *BaseWrapper) GetOrmUsing() string {
+		return this.OptStr("connection", "default")
 }
 
-func (base *BaseWrapper) GetQuery() (utils.SqlQueryBuilder, error) {
+func (this *BaseWrapper) GetQuery() (utils.SqlQueryBuilder, error) {
 		var (
 				err   error
 				query orm.QueryBuilder
 		)
 		if query, err = orm.NewQueryBuilder(utils.GetDatabaseDriver()); err == nil {
-				return utils.NewQueryBuilderWrapper(query, base.GetOrm(), base.NewModel()), nil
+				return utils.NewQueryBuilderWrapper(query, this.GetOrm(), this.NewModel()), nil
 		}
 		utils.Onerror(err)
 		return nil, err
 }
 
-func (base *BaseWrapper) Option(key string) (interface{}, bool) {
-		if base.Options == nil {
+func (this *BaseWrapper) Option(key string) (interface{}, bool) {
+		if this.Options == nil {
 				return nil, false
 		}
-		if v, ok := base.Options[key]; ok {
+		if v, ok := this.Options[key]; ok {
 				return v, true
 		}
 		return nil, false
 }
 
-func (base *BaseWrapper) OptStr(key string, def ...string) string {
+func (this *BaseWrapper) OptStr(key string, def ...string) string {
 		if len(def) == 0 {
 				def = append(def, "")
 		}
-		if v, ok := base.Option(key); ok {
+		if v, ok := this.Option(key); ok {
 				if str, ok := v.(string); ok {
 						return str
 				}
@@ -124,11 +127,11 @@ func (base *BaseWrapper) OptStr(key string, def ...string) string {
 		return def[0]
 }
 
-func (base *BaseWrapper) OptInt(key string, def ...int) int {
+func (this *BaseWrapper) OptInt(key string, def ...int) int {
 		if len(def) == 0 {
 				def = append(def, 0)
 		}
-		if v, ok := base.Option(key); ok {
+		if v, ok := this.Option(key); ok {
 				if num, ok := v.(int); ok {
 						return num
 				}
@@ -136,11 +139,11 @@ func (base *BaseWrapper) OptInt(key string, def ...int) int {
 		return def[0]
 }
 
-func (base *BaseWrapper) OptBool(key string, def ...bool) bool {
+func (this *BaseWrapper) OptBool(key string, def ...bool) bool {
 		if len(def) == 0 {
 				def = append(def, false)
 		}
-		if v, ok := base.Option(key); ok {
+		if v, ok := this.Option(key); ok {
 				if b, ok := v.(bool); ok {
 						return b
 				}
@@ -148,11 +151,11 @@ func (base *BaseWrapper) OptBool(key string, def ...bool) bool {
 		return def[0]
 }
 
-func (base *BaseWrapper) OptFloat(key string, def ...float64) float64 {
+func (this *BaseWrapper) OptFloat(key string, def ...float64) float64 {
 		if len(def) == 0 {
 				def = append(def, 0)
 		}
-		if v, ok := base.Option(key); ok {
+		if v, ok := this.Option(key); ok {
 				if b, ok := v.(float64); ok {
 						return b
 				}
@@ -160,11 +163,11 @@ func (base *BaseWrapper) OptFloat(key string, def ...float64) float64 {
 		return def[0]
 }
 
-func (base *BaseWrapper) OptMap(key string, def ...map[string]interface{}) map[string]interface{} {
+func (this *BaseWrapper) OptMap(key string, def ...map[string]interface{}) map[string]interface{} {
 		if len(def) == 0 {
 				def = append(def, nil)
 		}
-		if v, ok := base.Option(key); ok {
+		if v, ok := this.Option(key); ok {
 				if m, ok := v.(map[string]interface{}); ok {
 						return m
 				}
@@ -172,77 +175,77 @@ func (base *BaseWrapper) OptMap(key string, def ...map[string]interface{}) map[s
 		return def[0]
 }
 
-func (base *BaseWrapper) SetOpt(key string, val interface{}) {
-		if base.Options == nil {
-				base.Options = make(map[string]interface{})
+func (this *BaseWrapper) SetOpt(key string, val interface{}) {
+		if this.Options == nil {
+				this.Options = make(map[string]interface{})
 		}
-		base.GetOrm()
-		base.Options[key] = val
+		this.GetOrm()
+		this.Options[key] = val
 }
 
-func (base *BaseWrapper) ClearOpt(keys ...string) {
-		if base.Options == nil {
+func (this *BaseWrapper) ClearOpt(keys ...string) {
+		if this.Options == nil {
 				return
 		}
 		if len(keys) == 0 {
-				for k, _ := range base.Options {
-						delete(base.Options, k)
+				for k := range this.Options {
+						delete(this.Options, k)
 				}
 				return
 		}
 		for _, k := range keys {
-				delete(base.Options, k)
+				delete(this.Options, k)
 		}
 }
 
-func (base *BaseWrapper) GetFields() map[string]string {
-		if base.Fields == nil || len(base.Fields) == 0 {
-				if base.Model != nil {
-						base.Fields = reflects.GetItemsAllTypes(base.Model)
+func (this *BaseWrapper) GetFields() map[string]string {
+		if this.Fields == nil || len(this.Fields) == 0 {
+				if this.Model != nil {
+						this.Fields = reflects.GetItemsAllTypes(this.Model)
 				}
 		}
-		return base.Fields
+		return this.Fields
 }
 
-func (base *BaseWrapper) HasField(key string) bool {
-		if _, ok := base.GetFields()[key]; ok {
+func (this *BaseWrapper) HasField(key string) bool {
+		if _, ok := this.GetFields()[key]; ok {
 				return true
 		}
 		return false
 }
 
-func (base *BaseWrapper) GetError(clean ...bool) error {
+func (this *BaseWrapper) GetError(clean ...bool) error {
 		if len(clean) == 0 {
 				clean = append(clean, true)
 		}
-		var err = base.Error
+		var err = this.Error
 		if clean[0] {
-				base.Error = nil
+				this.Error = nil
 		}
 		return err
 }
 
-func (base *BaseWrapper) Table() string {
-		if base.Model == nil {
+func (this *BaseWrapper) Table() string {
+		if this.Model == nil {
 				return ""
 		}
-		if t, ok := base.Model.(Table); ok {
+		if t, ok := this.Model.(Table); ok {
 				return t.TableName()
 		}
 		// @todo snake camel
-		return strings.ToLower(reflects.Name(base.Model))
+		return strings.ToLower(reflects.Name(this.Model))
 }
 
-func (base *BaseWrapper) NewModel(data ...map[string]interface{}) interface{} {
-		if base.Model == nil {
-				base.Error = errors.New("miss model")
+func (this *BaseWrapper) NewModel(data ...map[string]interface{}) interface{} {
+		if this.Model == nil {
+				this.Error = errors.New("miss model")
 				return nil
 		}
-		original := reflects.RealValue(reflect.ValueOf(base.Model))
+		original := reflects.RealValue(reflect.ValueOf(this.Model))
 		cpy := reflect.New(original.Type())
 		model := cpy.Interface()
 		if len(data) > 0 {
-				base.Error = reflects.CopyMap2Struct(data[0], model)
+				this.Error = reflects.CopyMap2Struct(data[0], model)
 		}
 		return model
 }
@@ -261,4 +264,106 @@ func WrapperInitOptions(wrapper ModelWrapper, options ...interface{}) {
 						}
 				}
 		}
+}
+
+func (this *BaseWrapper) CreateUUid(table string, key string) string {
+		times := 0
+		uu := uuid.NewV4()
+		seqId := uu.String()
+		for this.GetOrm().QueryTable(table).Filter(key, seqId).Exist() {
+				uu = uuid.NewV4()
+				seqId = uu.String()
+				if times > 5 {
+						return seqId + strconv.Itoa(time.Now().Second())
+				}
+				times++
+		}
+		return seqId
+}
+
+func (this *BaseWrapper) FilterFields(arr []string) []string {
+		if len(arr) == 0 {
+				return arr
+		}
+		var (
+				keys  []string
+				table = this.Table()
+		)
+		fields := this.GetFields()
+		for _, key := range arr {
+				if strings.Contains(key, "*") {
+						keys = append(keys, key)
+						if key == "*" {
+								break
+						}
+				}
+				if strings.Contains(key, ".") {
+						if !strings.Contains(key, table) {
+								keys = append(keys, strings.Replace(key, ".", "__", -1))
+								continue
+						}
+						key = strings.Replace(key, table+".", "", 1)
+				}
+				if _, ok := fields[key]; !ok {
+						continue
+				}
+				keys = append(keys, key)
+		}
+		return keys
+}
+
+func (this *BaseWrapper) GetFieldKeys() []string {
+		var keys []string
+		for key, v := range this.GetFields() {
+				if v == "N" {
+						continue
+				}
+				keys = append(keys, key)
+		}
+		return keys
+}
+
+func (this *BaseWrapper) QueryResolver(builder orm.QuerySeter, allowFields []string, conditions map[string]interface{}) (query orm.QuerySeter, effects map[string]interface{}) {
+		effects = make(map[string]interface{})
+		for _, key := range allowFields {
+				v, ok := conditions[key]
+				if !ok || v == nil || v == "" || v == 0 {
+						continue
+				}
+				simple, ok := v.([]string)
+				if ok {
+						builder, ok = this.ResolverQuerySimple(builder, key, simple)
+						if ok {
+								effects[key] = simple
+						}
+						continue
+				}
+				arr, ok := v.([][]string)
+				if ok {
+						builder, ok = this.ResolverQueryComplex(builder, key, arr)
+						if ok {
+								effects[key] = arr
+						}
+						continue
+				}
+		}
+		return builder, effects
+}
+
+func (this *BaseWrapper) ResolverQuerySimple(builder orm.QuerySeter, key string, v []string) (query orm.QuerySeter, ok bool) {
+		if len(v) == 0 {
+				return builder, false
+		}
+		return builder.FilterRaw(key, strings.Join(v, " ")), true
+}
+
+func (this *BaseWrapper) ResolverQueryComplex(builder orm.QuerySeter, key string, v [][]string) (query orm.QuerySeter, ok bool) {
+		var i = 0
+		for _, it := range v {
+				builder, ok = this.ResolverQuerySimple(builder, key, it)
+				if ok {
+						i++
+				}
+		}
+		return builder, i > 0
 }

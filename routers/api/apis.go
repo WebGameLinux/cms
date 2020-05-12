@@ -10,19 +10,25 @@ import (
 
 // 版本好接口
 func RegisterApi(prefix string) {
-		//	Router("/", &controllers.MainController{})
-		// NSRouter("/login", new(controllers.MainController), "*:get"),
-		ns := NewNamespace(prefix+"/user",
+		// 需要登陆 用户信息接口
+		AddNamespace(NewNamespace(prefix+"/user",
 				NSRouter("/:id", GetUserController(), "get:GetUserById"),
-		)
-		// 无需登陆
-		ns2 := NewNamespace(prefix,
+		))
+		// 用户无需登陆
+		AddNamespace(NewNamespace(prefix,
 				NSRouter("/login", GetLoginController(), "post:Login"),
 				NSRouter("/register", GetUserController(), "post:Register"),
+		))
+		// 附件接口
+		AddNamespace(
+				NewNamespace("/attachment",
+						NSRouter("/:id", GetAttachmentController(), "get:GetById"),
+						NSRouter("/lists", GetAttachmentController(), "get:Lists"),
+						NSRouter("/upload", GetAttachmentController(), "post:Upload"),
+						NSRouter("/uploads", GetAttachmentController(), "post:Uploads"),
+				),
 		)
-
-		AddNamespace(ns)
-		AddNamespace(ns2)
+		// 用户登陆验证
 		ResisterApiMiddleware(prefix, "/user/*")
 }
 

@@ -1,6 +1,8 @@
 package reflects
 
 import (
+		"bytes"
+		"encoding/gob"
 		"encoding/json"
 		"errors"
 )
@@ -20,4 +22,12 @@ func CopyMap2Struct(data map[string]interface{}, v interface{}) error {
 				return json.Unmarshal(d, v)
 		}
 		return err
+}
+
+func Copy(src, dst interface{}) error {
+		var buf bytes.Buffer
+		if err := gob.NewEncoder(&buf).Encode(src); err != nil {
+				return err
+		}
+		return gob.NewDecoder(bytes.NewBuffer(buf.Bytes())).Decode(dst)
 }

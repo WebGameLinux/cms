@@ -11,5 +11,6 @@ func bootModels() {
 		orm.RegisterModel(new(models.User))
 		orm.RegisterModel(new(models.MenuModel))
 		orm.RegisterModel(new(captcha.MysqlCaptchaModel))
+		orm.RegisterModel(new(models.Attachments))
 		// orm.RegisterModel(new(models.User))
 }
